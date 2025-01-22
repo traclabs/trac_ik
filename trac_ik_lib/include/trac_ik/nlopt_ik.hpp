@@ -46,7 +46,8 @@ class NLOPT_IK
 {
   friend class TRAC_IK::TRAC_IK;
 public:
-  NLOPT_IK(rclcpp::Node::SharedPtr nh, const KDL::Chain& chain, const KDL::JntArray& q_min, const KDL::JntArray& q_max, double maxtime = 0.005, double eps = 1e-3, OptType type = SumSq);
+  NLOPT_IK(rclcpp::Node::SharedPtr _nh, const KDL::Chain& _chain, const KDL::JntArray& _q_min, const KDL::JntArray& _q_max, double _maxtime = 0.005, double _eps = 1e-3, OptType type = SumSq);
+  NLOPT_IK(const KDL::Chain& _chain, const KDL::JntArray& _q_min, const KDL::JntArray& _q_max, double _maxtime = 0.005, double _eps = 1e-3, OptType _type = SumSq, const rclcpp::Logger& _logger = rclcpp::get_logger("trac_ik.trac_ik_lib"));
 
   ~NLOPT_IK() {};
   int CartToJnt(const KDL::JntArray& q_init, const KDL::Frame& p_in, KDL::JntArray& q_out, const KDL::Twist bounds = KDL::Twist::Zero(), const KDL::JntArray& q_desired = KDL::JntArray());
@@ -74,7 +75,7 @@ private:
     aborted = false;
   }
 
-  rclcpp::Node::SharedPtr nh_;
+  rclcpp::Logger logger_;
   rclcpp::Clock system_clock;
 
   std::vector<double> lb;

@@ -39,8 +39,8 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace TRAC_IK
 {
 
-  TRAC_IK::TRAC_IK(rclcpp::Node::SharedPtr nh, const std::string& base_link, const std::string& tip_link, const std::string& URDF_param, double _maxtime, double _eps, SolveType _type) :
-  nh_(nh),
+TRAC_IK::TRAC_IK(rclcpp::Node::SharedPtr _nh, const std::string& _base_link, const std::string& _tip_link, const std::string& _URDF_param, double _maxtime, double _eps, SolveType _type) :
+  logger(_nh->get_logger()),
   initialized(false),
   eps(_eps),
   maxtime(_maxtime),
@@ -50,28 +50,32 @@ namespace TRAC_IK
   urdf::Model robot_model;
   std::string xml_string;
 
-  if(!nh_->has_parameter(URDF_param))
-    xml_string = nh_->declare_parameter(URDF_param, std::string(""));
+  if(!_nh->has_parameter(_URDF_param))
+    xml_string = _nh->declare_parameter(_URDF_param, std::string(""));
   else
-    nh_->get_parameter(URDF_param, xml_string);
+    _nh->get_parameter(_URDF_param, xml_string);
   
   if(xml_string.empty())
   {
-    RCLCPP_FATAL(nh_->get_logger(), "Could not load the xml from parameter: %s", URDF_param.c_str());
+    RCLCPP_FATAL(_nh->get_logger(), "Could not load the xml from parameter: %s", _URDF_param.c_str());
     return;
   }
 
-  robot_model.initString(xml_string);
+  if (!robot_model.initString(xml_string))
+  {
+    RCLCPP_FATAL(logger, "Unable to initialize urdf::Model from robot description.");
+    return;
+  }
 
-  RCLCPP_DEBUG_STREAM(nh_->get_logger(), "Reading joints and links from URDF");
+  RCLCPP_DEBUG_STREAM(logger, "Reading joints and links from URDF");
 
   KDL::Tree tree;
 
   if (!kdl_parser::treeFromUrdfModel(robot_model, tree))
-    RCLCPP_FATAL(nh_->get_logger(), "Failed to extract kdl tree from xml robot description");
+    RCLCPP_FATAL(logger, "Failed to extract kdl tree from xml robot description");
 
-  if (!tree.getChain(base_link, tip_link, chain))
-    RCLCPP_FATAL(nh_->get_logger(), "Couldn't find chain %s to %s", base_link.c_str(), tip_link.c_str());
+  if (!tree.getChain(_base_link, _tip_link, chain))
+    RCLCPP_FATAL(logger, "Couldn't find chain %s to %s", _base_link.c_str(), _tip_link.c_str());
 
   std::vector<KDL::Segment> chain_segs = chain.segments;
 
@@ -119,16 +123,18 @@ namespace TRAC_IK
         lb(joint_num - 1) = std::numeric_limits<float>::lowest();
         ub(joint_num - 1) = std::numeric_limits<float>::max();
       }
-      RCLCPP_DEBUG_STREAM(nh_->get_logger(), "IK Using joint " << joint->name << " " << lb(joint_num - 1) << " " << ub(joint_num - 1));
+      RCLCPP_DEBUG_STREAM(logger, "IK Using joint " << joint->name << " " << lb(joint_num - 1) << " " << ub(joint_num - 1));
     }
   }
 
   initialize();
 }
 
+TRAC_IK::TRAC_IK(rclcpp::Node::SharedPtr _nh, const KDL::Chain& _chain, const KDL::JntArray& _q_min, const KDL::JntArray& _q_max, double _maxtime, double _eps, SolveType _type):
+  TRAC_IK(_chain, _q_min, _q_max, _maxtime, _eps, _type, _nh->get_logger()) {}
 
-  TRAC_IK::TRAC_IK(rclcpp::Node::SharedPtr nh, const KDL::Chain& _chain, const KDL::JntArray& _q_min, const KDL::JntArray& _q_max, double _maxtime, double _eps, SolveType _type):
-  nh_(nh),
+TRAC_IK::TRAC_IK(const KDL::Chain& _chain, const KDL::JntArray& _q_min, const KDL::JntArray& _q_max, double _maxtime, double _eps, SolveType _type, const rclcpp::Logger& _logger):
+  logger(_logger),
   initialized(false),
   chain(_chain),
   lb(_q_min),
@@ -147,7 +153,7 @@ void TRAC_IK::initialize()
   assert(chain.getNrOfJoints() == ub.data.size());
 
   jacsolver.reset(new KDL::ChainJntToJacSolver(chain));
-  nl_solver.reset(new NLOPT_IK::NLOPT_IK(nh_, chain, lb, ub, maxtime, eps, NLOPT_IK::SumSq));
+  nl_solver.reset(new NLOPT_IK::NLOPT_IK(chain, lb, ub, maxtime, eps, NLOPT_IK::SumSq, logger));
   iksolver.reset(new KDL::ChainIkSolverPos_TL(chain, lb, ub, maxtime, eps, true, true));
 
   for (uint i = 0; i < chain.segments.size(); i++)
@@ -412,7 +418,7 @@ int TRAC_IK::CartToJnt(const KDL::JntArray &q_init, const KDL::Frame &p_in, KDL:
 
   if (!initialized)
   {
-    RCLCPP_ERROR(nh_->get_logger(), "TRAC-IK was not properly initialized with a valid chain or limits.  IK cannot proceed");
+    RCLCPP_ERROR(logger, "TRAC-IK was not properly initialized with a valid chain or limits.  IK cannot proceed");
     return -1;
   }
 

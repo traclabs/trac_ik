@@ -29,7 +29,6 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 ********************************************************************************/
 
 #include <trac_ik/kdl_tl.hpp>
-#include <rclcpp/rclcpp.hpp>
 #include <cfloat>
 
 namespace KDL

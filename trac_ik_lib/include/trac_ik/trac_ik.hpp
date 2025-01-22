@@ -34,6 +34,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <trac_ik/nlopt_ik.hpp>
 #include <kdl/chainjnttojacsolver.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <thread>
 #include <mutex>
 #include <memory>
@@ -46,9 +47,10 @@ enum SolveType { Speed, Distance, Manip1, Manip2 };
 class TRAC_IK
 {
 public:
-  TRAC_IK(rclcpp::Node::SharedPtr nh, const KDL::Chain& _chain, const KDL::JntArray& _q_min, const KDL::JntArray& _q_max, double _maxtime = 0.005, double _eps = 1e-5, SolveType _type = Speed);
+  TRAC_IK(rclcpp::Node::SharedPtr _nh, const KDL::Chain& _chain, const KDL::JntArray& _q_min, const KDL::JntArray& _q_max, double _maxtime = 0.005, double _eps = 1e-5, SolveType _type = Speed);
+  TRAC_IK(const KDL::Chain& _chain, const KDL::JntArray& _q_min, const KDL::JntArray& _q_max, double _maxtime = 0.005, double _eps = 1e-5, SolveType _type = Speed, const rclcpp::Logger& logger = rclcpp::get_logger("trac_ik.trac_ik_lib"));
 
-  TRAC_IK(rclcpp::Node::SharedPtr nh, const std::string& base_link, const std::string& tip_link, const std::string& URDF_param = "robot_description", double _maxtime = 0.005, double _eps = 1e-5, SolveType _type = Speed);
+  TRAC_IK(rclcpp::Node::SharedPtr _nh, const std::string& _base_link, const std::string& _tip_link, const std::string& _URDF_param = "robot_description", double _maxtime = 0.005, double _eps = 1e-5, SolveType _type = Speed);
 
   ~TRAC_IK();
 
@@ -82,7 +84,7 @@ public:
   {
     lb = lb_;
     ub = ub_;
-    nl_solver.reset(new NLOPT_IK::NLOPT_IK(nh_, chain, lb, ub, maxtime, eps, NLOPT_IK::SumSq));
+    nl_solver.reset(new NLOPT_IK::NLOPT_IK(chain, lb, ub, maxtime, eps, NLOPT_IK::SumSq, logger));
     iksolver.reset(new KDL::ChainIkSolverPos_TL(chain, lb, ub, maxtime, eps, true, true));
     return true;
   }
@@ -106,7 +108,7 @@ public:
   }
 
 private:
-  rclcpp::Node::SharedPtr nh_;
+  rclcpp::Logger logger;
   bool initialized;
   KDL::Chain chain;
   KDL::JntArray lb, ub;

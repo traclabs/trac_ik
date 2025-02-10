@@ -34,7 +34,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <rclcpp/rclcpp.hpp>
 #include <limits>
 #include <kdl_parser/kdl_parser.hpp>
-#include <urdf/model.h>
+#include <urdf/model.hpp>
 
 namespace TRAC_IK
 {
@@ -54,7 +54,7 @@ TRAC_IK::TRAC_IK(rclcpp::Node::SharedPtr _nh, const std::string& _base_link, con
     xml_string = _nh->declare_parameter(_URDF_param, std::string(""));
   else
     _nh->get_parameter(_URDF_param, xml_string);
-  
+
   if(xml_string.empty())
   {
     RCLCPP_FATAL(_nh->get_logger(), "Could not load the xml from parameter: %s", _URDF_param.c_str());

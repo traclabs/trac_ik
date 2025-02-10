@@ -29,7 +29,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 ********************************************************************************/
 
 
-#include <urdf/model.h>
+#include <urdf/model.hpp>
 #include <tf2_kdl/tf2_kdl.hpp>
 #include <algorithm>
 #include <kdl/tree.hpp>
@@ -37,8 +37,8 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <trac_ik/trac_ik.hpp>
 #include <trac_ik/trac_ik_kinematics_plugin.hpp>
 #include <limits>
-#include <moveit/robot_state/robot_state.h>
-#include "trac_ik_kinematics_parameters.hpp"
+#include <moveit/robot_state/robot_state.hpp>
+#include <trac_ik_kinematics_plugin/trac_ik_kinematics_parameters.hpp>
 
 namespace trac_ik_kinematics_plugin
 {

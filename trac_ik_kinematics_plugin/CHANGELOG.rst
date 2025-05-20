@@ -2,6 +2,11 @@
 Changelog for package trac_ik_kinematics_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* drop requirement for obsolete c++ standard to support compiling on newer systems with log4cxx requiring c++17 (`#39 <https://bitbucket.org/traclabs/trac_ik/pull-requests/39>`_)
+* Contributors: v4hn
+
 1.6.6 (2021-05-05)
 ------------------
 * removed bad depends

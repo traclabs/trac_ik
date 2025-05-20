@@ -17,13 +17,13 @@
 
   <license>BSD</license>
   <buildtool_depend>ament_cmake</buildtool_depend>
-
+  <buildtool_depend>eigen3_cmake_module</buildtool_depend>
+  <buildtool_export_depend>eigen3_cmake_module</buildtool_export_depend>
 
   <depend>eigen</depend>
   <depend>geometry_msgs</depend>
   <depend>kdl_parser</depend>
   <depend>libnlopt-cxx-dev</depend>
-  <depend>libnlopt-dev</depend>
   <depend>pkg-config</depend>
   <depend>rclcpp</depend>
   <depend>urdf</depend>

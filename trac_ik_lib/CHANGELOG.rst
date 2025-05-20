@@ -2,6 +2,13 @@
 Changelog for package trac_ik_lib
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Switch from ament_target_dependencies to target_link_libraries. (`#43 <https://bitbucket.org/traclabs/trac_ik/pull-requests/43>`_)
+* Fix deprecated header warnings (`#41 <https://bitbucket.org/traclabs/trac_ik/pull-requests/41>`_)
+* Add a constructor TRAC_IK::TRAC_IK that does not require a rclcpp::Node as argument (`#40 <https://bitbucket.org/traclabs/trac_ik/pull-requests/40>`_)
+* Contributors: Kenji Brameld, Roelof
+
 2.0.1 (2024-04-12)
 ------------------
 * Add missing geometry_msgs dependency in package.xml

@@ -2,8 +2,8 @@
 Changelog for package trac_ik_kinematics_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.1.0 (2025-05-20)
+------------------
 * Switch from ament_target_dependencies to target_link_libraries. (`#43 <https://bitbucket.org/traclabs/trac_ik/pull-requests/43>`_)
 * Clean up and format CMakeLists.txt. (`#43 <https://bitbucket.org/traclabs/trac_ik/pull-requests/43>`_)
 * Fix deprecated header warnings (`#41 <https://bitbucket.org/traclabs/trac_ik/pull-requests/41>`_)

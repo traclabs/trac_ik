@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>trac_ik_kinematics_plugin</name>
-  <version>2.0.1</version>
+  <version>2.1.0</version>
   <description>A MoveIt! Kinematics plugin using TRAC-IK</description>
   <author>Patrick Beeson</author>
   <maintainer email="robotics@traclabs.com">TRACLabs Robotics</maintainer>

@@ -2,8 +2,8 @@
 Changelog for package trac_ik_lib
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.6.7 (2025-05-20)
+------------------
 * drop requirement for obsolete c++ standard to support compiling on newer systems with log4cxx requiring c++17 (`#39 <https://bitbucket.org/traclabs/trac_ik/pull-requests/39>`_)
 * added build_export_depends to tracik_lib for nlopt (`#33 <https://bitbucket.org/traclabs/trac_ik/pull-requests/33>`_)
 * hotfix for init of solvers using non-thread-safe KDL::Chain (`#32 <https://bitbucket.org/traclabs/trac_ik/pull-requests/32>`_)

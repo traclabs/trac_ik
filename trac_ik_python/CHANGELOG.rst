@@ -2,8 +2,8 @@
 Changelog for package trac_ik_python
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.6.7 (2025-05-20)
+------------------
 * drop requirement for obsolete c++ standard to support compiling on newer systems with log4cxx requiring c++17 (`#39 <https://bitbucket.org/traclabs/trac_ik/pull-requests/39>`_)
 * Contributors: v4hn
 

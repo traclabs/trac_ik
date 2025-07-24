@@ -350,6 +350,8 @@ bool TRAC_IKKinematicsPlugin::searchPositionIK(const geometry_msgs::msg::Pose &i
     solvetype = TRAC_IK::Manip1;
   else if (solve_type == "Manipulation2")
     solvetype = TRAC_IK::Manip2;
+  else if (solve_type == "Manipulation3")
+      solvetype = TRAC_IK::Manip3;
   else if (solve_type == "Distance")
     solvetype = TRAC_IK::Distance;
   else

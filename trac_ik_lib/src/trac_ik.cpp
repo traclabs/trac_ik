@@ -153,8 +153,7 @@ void TRAC_IK::initialize()
   assert(chain.getNrOfJoints() == ub.data.size());
 
   jacsolver.reset(new KDL::ChainJntToJacSolver(chain));
-  nl_solver.reset(new NLOPT_IK::NLOPT_IK(chain, lb, ub, maxtime, eps, NLOPT_IK::SumSq, logger));
-  iksolver.reset(new KDL::ChainIkSolverPos_TL(chain, lb, ub, maxtime, eps, true, true));
+  resetSolvers();
 
   for (uint i = 0; i < chain.segments.size(); i++)
   {
@@ -207,23 +206,7 @@ inline void normalizeAngle(double& val, const double& min, const double& max)
 
 inline void normalizeAngle(double& val, const double& target)
 {
-  double new_target = target + M_PI;
-  if (val > new_target)
-  {
-    //Find actual angle offset
-    double diffangle = fmod(val - new_target, 2 * M_PI);
-    // Add that to upper bound and go back a full rotation
-    val = new_target + diffangle - 2 * M_PI;
-  }
-
-  new_target = target - M_PI;
-  if (val < new_target)
-  {
-    //Find actual angle offset
-    double diffangle = fmod(new_target - val, 2 * M_PI);
-    // Add that to upper bound and go back a full rotation
-    val = new_target - diffangle + 2 * M_PI;
-  }
+  normalizeAngle(val, target - M_PI, target + M_PI);
 }
 
 
@@ -254,6 +237,7 @@ bool TRAC_IK::runSolver(T1& solver, T2& other_solver,
       {
       case Manip1:
       case Manip2:
+      case Manip3:
         normalize_limits(q_init, q_out);
         break;
       default:
@@ -267,16 +251,23 @@ bool TRAC_IK::runSolver(T1& solver, T2& other_solver,
         uint curr_size = solutions.size();
         errors.resize(curr_size);
         mtx_.unlock();
-        double err, penalty;
+        double err, penalty, manip_value;
         switch (solvetype)
         {
         case Manip1:
           penalty = manipPenalty(q_out);
-          err = penalty * TRAC_IK::ManipValue1(q_out);
+          manip_value = TRAC_IK::manipValue1(q_out);
+          err = penalty * manip_value;
           break;
         case Manip2:
           penalty = manipPenalty(q_out);
-          err = penalty * TRAC_IK::ManipValue2(q_out);
+          manip_value = TRAC_IK::manipValue2(q_out);
+          err = penalty * manip_value;
+          break;
+        case Manip3:
+          penalty = manipPenalty(q_out);
+          manip_value = TRAC_IK::manipValue3(q_out);
+          err = penalty * manip_value;
           break;
         default:
           err = TRAC_IK::JointErr(q_init, q_out);
@@ -310,8 +301,6 @@ void TRAC_IK::normalize_seed(const KDL::JntArray& seed, KDL::JntArray& solution)
   // Make sure rotational joint values are within 1 revolution of seed; then
   // ensure joint limits are met.
 
-  bool improved = false;
-
   for (uint i = 0; i < lb.data.size(); i++)
   {
 
@@ -339,8 +328,6 @@ void TRAC_IK::normalize_limits(const KDL::JntArray& seed, KDL::JntArray& solutio
 {
   // Make sure rotational joint values are within 1 revolution of middle of
   // limits; then ensure joint limits are met.
-
-  bool improved = false;
 
   for (uint i = 0; i < lb.data.size(); i++)
   {
@@ -385,14 +372,9 @@ double TRAC_IK::manipPenalty(const KDL::JntArray& arr)
 }
 
 
-double TRAC_IK::ManipValue1(const KDL::JntArray& arr)
+double TRAC_IK::manipValue1(const KDL::JntArray& arr)
 {
-  KDL::Jacobian jac(arr.data.size());
-
-  jacsolver->JntToJac(arr, jac);
-
-  Eigen::JacobiSVD<Eigen::MatrixXd> svdsolver(jac.data);
-  Eigen::MatrixXd singular_values = svdsolver.singularValues();
+  Eigen::MatrixXd singular_values = computeSingularValues(arr);
 
   double error = 1.0;
   for (unsigned int i = 0; i < singular_values.rows(); ++i)
@@ -400,16 +382,28 @@ double TRAC_IK::ManipValue1(const KDL::JntArray& arr)
   return error;
 }
 
-double TRAC_IK::ManipValue2(const KDL::JntArray& arr)
+double TRAC_IK::manipValue2(const KDL::JntArray& arr)
 {
-  KDL::Jacobian jac(arr.data.size());
-
-  jacsolver->JntToJac(arr, jac);
-
-  Eigen::JacobiSVD<Eigen::MatrixXd> svdsolver(jac.data);
-  Eigen::MatrixXd singular_values = svdsolver.singularValues();
+  Eigen::MatrixXd singular_values = computeSingularValues(arr);
 
   return singular_values.minCoeff() / singular_values.maxCoeff();
+}
+
+double TRAC_IK::manipValue3(const KDL::JntArray& arr)
+{
+    Eigen::MatrixXd singular_values = computeSingularValues(arr);
+
+    return singular_values.minCoeff();
+}
+
+Eigen::MatrixXd TRAC_IK::computeSingularValues(const KDL::JntArray& arr)
+{
+    KDL::Jacobian jac(arr.data.size());
+
+    jacsolver->JntToJac(arr, jac);
+
+    Eigen::JacobiSVD<Eigen::MatrixXd> svdsolver(jac.data);
+    return svdsolver.singularValues();
 }
 
 
@@ -449,6 +443,7 @@ int TRAC_IK::CartToJnt(const KDL::JntArray &q_init, const KDL::Frame &p_in, KDL:
   {
   case Manip1:
   case Manip2:
+  case Manip3:
     std::sort(errors.rbegin(), errors.rend()); // rbegin/rend to sort by max
     break;
   default:

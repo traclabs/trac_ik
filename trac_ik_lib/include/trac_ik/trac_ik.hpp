@@ -42,7 +42,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace TRAC_IK
 {
 
-enum SolveType { Speed, Distance, Manip1, Manip2 };
+enum SolveType { Speed, Distance, Manip1, Manip2, Manip3 };
 
 class TRAC_IK
 {
@@ -84,8 +84,7 @@ public:
   {
     lb = lb_;
     ub = ub_;
-    nl_solver.reset(new NLOPT_IK::NLOPT_IK(chain, lb, ub, maxtime, eps, NLOPT_IK::SumSq, logger));
-    iksolver.reset(new KDL::ChainIkSolverPos_TL(chain, lb, ub, maxtime, eps, true, true));
+    resetSolvers();
     return true;
   }
 
@@ -156,16 +155,25 @@ private:
   Ming-June, Tsia, PhD Thesis, Ohio State University, 1986.
   https://etd.ohiolink.edu/!etd.send_file?accession=osu1260297835
   */
-  double manipPenalty(const KDL::JntArray&);
-  double ManipValue1(const KDL::JntArray&);
-  double ManipValue2(const KDL::JntArray&);
+  double manipPenalty(const KDL::JntArray& arr);
+  double manipValue1(const KDL::JntArray& arr);
+  double manipValue2(const KDL::JntArray& arr);
+  double manipValue3(const KDL::JntArray& arr);
 
-  inline bool myEqual(const KDL::JntArray& a, const KDL::JntArray& b)
+  Eigen::MatrixXd computeSingularValues(const KDL::JntArray& arr);
+
+  inline bool myEqual(const KDL::JntArray& a, const KDL::JntArray& b, const double eps=1e-4)
   {
-    return (a.data - b.data).isZero(1e-4);
+    return (a.data - b.data).isZero(eps);
   }
 
   void initialize();
+
+  void resetSolvers()
+  {
+    nl_solver.reset(new NLOPT_IK::NLOPT_IK(chain, lb, ub, maxtime, eps, NLOPT_IK::SumSq, logger));
+    iksolver.reset(new KDL::ChainIkSolverPos_TL(chain, lb, ub, maxtime, eps, true, true));
+  }
 
 };
 

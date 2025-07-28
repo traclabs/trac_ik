@@ -2,6 +2,11 @@
 Changelog for package trac_ik_kinematics_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Add Manipulation3, maximizing smallest singular value (`#46 <https://bitbucket.org/traclabs/trac_ik/pull-requests/46>`_)
+* Contributors: Matthijs van der Burgh
+
 2.1.0 (2025-05-20)
 ------------------
 * Switch from ament_target_dependencies to target_link_libraries. (`#43 <https://bitbucket.org/traclabs/trac_ik/pull-requests/43>`_)

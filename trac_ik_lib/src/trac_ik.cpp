@@ -67,7 +67,7 @@ TRAC_IK::TRAC_IK(rclcpp::Node::SharedPtr _nh, const std::string& _base_link, con
     return;
   }
 
-  RCLCPP_DEBUG_STREAM(logger, "Reading joints and links from URDF");
+  RCLCPP_DEBUG(logger, "Reading joints and links from URDF");
 
   KDL::Tree tree;
 

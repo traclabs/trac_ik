@@ -63,7 +63,7 @@ namespace TRAC_IK
 
   robot_model.initString(xml_string);
 
-  RCLCPP_DEBUG_STREAM(nh_->get_logger(), "Reading joints and links from URDF");
+  RCLCPP_DEBUG(nh_->get_logger(), "Reading joints and links from URDF");
 
   KDL::Tree tree;
 

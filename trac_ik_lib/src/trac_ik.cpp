@@ -429,8 +429,10 @@ int TRAC_IK::CartToJnt(const KDL::JntArray &q_init, const KDL::Frame &p_in, KDL:
   task1 = std::thread(&TRAC_IK::runKDL, this, q_init, p_in);
   task2 = std::thread(&TRAC_IK::runNLOPT, this, q_init, p_in);
 
-  task1.join();
-  task2.join();
+  if (task1.joinable())
+      task1.join();
+  if (task2.joinable())
+      task2.join();
 
   // No lock as no threading anymore
   if (solutions.empty())
@@ -459,6 +461,11 @@ int TRAC_IK::CartToJnt(const KDL::JntArray &q_init, const KDL::Frame &p_in, KDL:
 
 TRAC_IK::~TRAC_IK()
 {
+  if (initialized)
+  {
+    iksolver->abort();
+    nl_solver->abort();
+  }
   if (task1.joinable())
     task1.join();
   if (task2.joinable())

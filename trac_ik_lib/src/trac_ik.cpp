@@ -67,7 +67,7 @@ TRAC_IK::TRAC_IK(rclcpp::Node::SharedPtr _nh, const std::string& _base_link, con
     return;
   }
 
-  RCLCPP_DEBUG_STREAM(logger, "Reading joints and links from URDF");
+  RCLCPP_DEBUG(logger, "Reading joints and links from URDF");
 
   KDL::Tree tree;
 
@@ -250,7 +250,6 @@ bool TRAC_IK::runSolver(T1& solver, T2& other_solver,
         solutions.push_back(q_out);
         uint curr_size = solutions.size();
         errors.resize(curr_size);
-        mtx_.unlock();
         double err, penalty, manip_value;
         switch (solvetype)
         {
@@ -273,7 +272,6 @@ bool TRAC_IK::runSolver(T1& solver, T2& other_solver,
           err = TRAC_IK::JointErr(q_init, q_out);
           break;
         }
-        mtx_.lock();
         errors[curr_size - 1] = std::make_pair(err, curr_size - 1);
       }
       mtx_.unlock();
@@ -422,6 +420,7 @@ int TRAC_IK::CartToJnt(const KDL::JntArray &q_init, const KDL::Frame &p_in, KDL:
   nl_solver->reset();
   iksolver->reset();
 
+  // No lock as no threading yet
   solutions.clear();
   errors.clear();
 
@@ -430,9 +429,12 @@ int TRAC_IK::CartToJnt(const KDL::JntArray &q_init, const KDL::Frame &p_in, KDL:
   task1 = std::thread(&TRAC_IK::runKDL, this, q_init, p_in);
   task2 = std::thread(&TRAC_IK::runNLOPT, this, q_init, p_in);
 
-  task1.join();
-  task2.join();
+  if (task1.joinable())
+      task1.join();
+  if (task2.joinable())
+      task2.join();
 
+  // No lock as no threading anymore
   if (solutions.empty())
   {
     q_out = q_init;
@@ -459,6 +461,11 @@ int TRAC_IK::CartToJnt(const KDL::JntArray &q_init, const KDL::Frame &p_in, KDL:
 
 TRAC_IK::~TRAC_IK()
 {
+  if (initialized)
+  {
+    iksolver->abort();
+    nl_solver->abort();
+  }
   if (task1.joinable())
     task1.join();
   if (task2.joinable())

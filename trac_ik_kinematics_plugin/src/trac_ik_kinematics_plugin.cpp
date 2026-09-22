@@ -371,50 +371,66 @@ bool TRAC_IKKinematicsPlugin::searchPositionIK(const geometry_msgs::msg::Pose &i
 
     int rc = ik_solver.CartToJnt(in, frame, out, bounds);
 
-    // If you want to retrieve all the returned solutions, the (commented) code below does it
-    // Note that you have to call getSolutions() AFTER a successful code to CartToJnt to get all the solutions generated
-    // CartToJnt returns only one solution, but more could have been generated
-    // usually, Speed returns 1 solution.  The other modes return more
-    // rc is the number of solutions obtained
-    /*
-    if(rc > 0)
+    if (rc < 0)
     {
-      std::vector<KDL::JntArray> sols;
-      bool res = ik_solver.getSolutions(sols);
-      RCLCPP_WARN(LOGGER, "Generated %u solutions, retrieved %lu solutions ", rc, sols.size());
-    }*/
+      RCLCPP_DEBUG_STREAM(LOGGER, "TRAC_IK returned error code: " << rc);
+      continue;
+    }
 
     solution.resize(num_joints_);
 
-    if (rc >= 0)
+    if (!solution_callback)
     {
+      RCLCPP_DEBUG(LOGGER, "No callback provided, returning first solution");
       for (uint z = 0; z < num_joints_; z++)
         solution[z] = out(z);
+      return true; // no collision check callback provided
+    }
 
-      // check for collisions if a callback is provided
-      if (solution_callback)
+    // Check for collisions if a callback is provided. CartToJnt returns only one solution, but more
+    // could have been generated; usually Speed returns 1 solution, the other modes return more.
+    // Offer every generated solution to the callback, best (lowest error) first, instead of giving
+    // up on this attempt after the first one.
+    std::vector<KDL::JntArray> solutions;
+    std::vector<std::pair<double, uint> > errors;
+    bool res = ik_solver.getSolutions(solutions, errors);
+    RCLCPP_DEBUG_STREAM(LOGGER, "Generated " << rc << " solutions, retrieved " << solutions.size() << " solutions ");
+
+    if (!res)
+    {
+      RCLCPP_DEBUG(LOGGER, "Could not retrieve solutions from IK solver");
+      error_code.val = moveit_msgs::msg::MoveItErrorCodes::NO_IK_SOLUTION;
+      return false;
+    }
+
+    for (uint i = 0; i < errors.size(); ++i)
+    {
+      const auto& error = errors[i];
+      const KDL::JntArray& sol = solutions[error.second];
+      for (uint z = 0; z < num_joints_; ++z)
+        solution[z] = sol(z);
+      RCLCPP_DEBUG_STREAM(LOGGER, "Checking solution with error: " << error.first << ", with joints: " << sol.data.transpose());
+      solution_callback(ik_pose, solution, error_code);
+      if (error_code.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
       {
-        solution_callback(ik_pose, solution, error_code);
-        if (error_code.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
-        {
-          RCLCPP_DEBUG_STREAM(LOGGER, "Solution passes callback");
-          return true;
-        }
-        else
-        {
-          RCLCPP_DEBUG_STREAM(LOGGER, "Solution has error code " << error_code.val);
-          std::vector<double> random_state(ik_seed_state);
-          robot_model_->getVariableRandomPositions(*rng_, random_state);
-          for (uint z = 0; z < num_joints_; z++)
-            in(z) = random_state[z];
-          RCLCPP_DEBUG_STREAM(LOGGER, "Retrying with new seed");
-        }
+        RCLCPP_DEBUG_STREAM(LOGGER, "Solution(index=" << i << ") passes the callback");
+        return true;
       }
       else
-        return true; // no collision check callback provided
+      {
+        RCLCPP_DEBUG_STREAM(LOGGER, "Solution(index=" << i << ") fails the callback with error code: " << error_code.val);
+      }
     }
+
+    // None of the solutions passed the callback, retry with a new seed
+    std::vector<double> random_state(ik_seed_state);
+    robot_model_->getVariableRandomPositions(*rng_, random_state);
+    for (uint z = 0; z < num_joints_; z++)
+      in(z) = random_state[z];
+    RCLCPP_DEBUG_STREAM(LOGGER, "Retrying with new seed");
   }
 
+  RCLCPP_ERROR(LOGGER, "No valid IK solution found after checking all possible solutions");
   error_code.val = moveit_msgs::msg::MoveItErrorCodes::NO_IK_SOLUTION;
   return false;
 }

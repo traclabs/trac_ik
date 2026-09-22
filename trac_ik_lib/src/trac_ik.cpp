@@ -178,8 +178,9 @@ void TRAC_IK::initialize()
 bool TRAC_IK::unique_solution(const KDL::JntArray& sol)
 {
 
+  constexpr double eps = 1e-4;
   for (uint i = 0; i < solutions.size(); i++)
-    if (myEqual(sol, solutions[i]))
+    if (KDL::Equal(sol, solutions[i], eps))
       return false;
   return true;
 
@@ -410,7 +411,7 @@ int TRAC_IK::CartToJnt(const KDL::JntArray &q_init, const KDL::Frame &p_in, KDL:
 
   if (!initialized)
   {
-    RCLCPP_ERROR(logger, "TRAC-IK was not properly initialized with a valid chain or limits.  IK cannot proceed");
+    RCLCPP_ERROR(logger, "TRAC-IK was not properly initialized with a valid chain or limits. IK cannot proceed");
     return -1;
   }
 

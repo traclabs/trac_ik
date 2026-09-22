@@ -162,11 +162,6 @@ private:
 
   Eigen::MatrixXd computeSingularValues(const KDL::JntArray& arr);
 
-  inline bool myEqual(const KDL::JntArray& a, const KDL::JntArray& b, const double eps=1e-4)
-  {
-    return (a.data - b.data).isZero(eps);
-  }
-
   void initialize();
 
   void resetSolvers()

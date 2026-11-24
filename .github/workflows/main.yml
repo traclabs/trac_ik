@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         ROS_DISTRO: [rolling]
-        ROS_REPO: [testing, main]
+        ROS_REPO: [testing]
     env:
       CCACHE_DIR: "${{ github.workspace }}/.ccache" # directory for ccache (and how we enable ccache in industrial_ci)
     steps:

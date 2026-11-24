@@ -51,50 +51,44 @@ class ChainIkSolverPos_TL
   friend class TRAC_IK::TRAC_IK;
 
 public:
-  ChainIkSolverPos_TL(const Chain& chain, const JntArray& q_min, const JntArray& q_max, double maxtime = 0.005, double eps = 1e-3, bool random_restart = false, bool try_jl_wrap = false);
+  ChainIkSolverPos_TL(const Chain& chain, const JntArray& q_min, const JntArray& q_max, double eps = 1e-3, bool random_restart = false, bool try_jl_wrap = false);
 
-  ~ChainIkSolverPos_TL();
+  ~ChainIkSolverPos_TL() = default;
 
-  int CartToJnt(const KDL::JntArray& q_init, const KDL::Frame& p_in, KDL::JntArray& q_out, const KDL::Twist bounds = KDL::Twist::Zero());
-
-  inline void setMaxtime(double t)
-  {
-    maxtime = t;
-  }
+  int CartToJnt(const KDL::JntArray& q_init, const KDL::Frame& p_in, KDL::JntArray& q_out, const double max_time = 0.005, const KDL::Twist bounds = KDL::Twist::Zero());
 
 private:
-  const Chain chain;
-  JntArray q_min;
-  JntArray q_max;
+  const Chain chain_;
+  JntArray q_min_;
+  JntArray q_max_;
 
-  KDL::Twist bounds;
+  KDL::Twist bounds_;
 
-  KDL::ChainIkSolverVel_pinv vik_solver;
-  KDL::ChainFkSolverPos_recursive fksolver;
-  JntArray delta_q;
-  double maxtime;
+  KDL::ChainIkSolverVel_pinv vik_solver_;
+  KDL::ChainFkSolverPos_recursive fk_solver_;
+  JntArray delta_q_;
 
-  double eps;
+  double eps_;
 
-  bool rr;
-  bool wrap;
+  bool rr_;
+  bool wrap_;
 
-  std::vector<KDL::BasicJointType> types;
+  std::vector<KDL::BasicJointType> types_;
 
   inline void abort()
   {
-    aborted = true;
+    aborted_ = true;
   }
 
   inline void reset()
   {
-    aborted = false;
+    aborted_ = false;
   }
 
-  bool aborted;
+  bool aborted_;
 
-  Frame f;
-  Twist delta_twist;
+  Frame f_;
+  Twist delta_twist_;
 
   inline static double fRand(double min, double max)
   {
@@ -102,7 +96,7 @@ private:
     return min + f * (max - min);
   }
   
-  rclcpp::Clock system_clock;
+  rclcpp::Clock system_clock_;
 
 };
 
@@ -117,7 +111,7 @@ private:
  * \warning In contrast to standard KDL diff methods, the result of
  * diffRelative is w.r.t. frame b1 instead of frame a.
  */
-IMETHOD Twist diffRelative(const Frame & F_a_b1, const Frame & F_a_b2, double dt = 1)
+IMETHOD Twist diffRelative(const Frame& F_a_b1, const Frame& F_a_b2, double dt = 1)
 {
   return Twist(F_a_b1.M.Inverse() * diff(F_a_b1.p, F_a_b2.p, dt),
                F_a_b1.M.Inverse() * diff(F_a_b1.M, F_a_b2.M, dt));

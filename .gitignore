@@ -1,1 +1,5 @@
 trac_ik_python/src/trac_ik_python/trac_ik.pyc
+
+# IDEs
+.idea
+.qtcreator

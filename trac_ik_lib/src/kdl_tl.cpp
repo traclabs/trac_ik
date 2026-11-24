@@ -33,13 +33,13 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace KDL
 {
-ChainIkSolverPos_TL::ChainIkSolverPos_TL(const Chain& _chain, const JntArray& _q_min, const JntArray& _q_max, double _maxtime, double _eps, bool _random_restart, bool _try_jl_wrap):
-  chain(_chain), q_min(_q_min), q_max(_q_max), vik_solver(chain), fksolver(chain), delta_q(chain.getNrOfJoints()),
-  maxtime(_maxtime), eps(_eps), rr(_random_restart), wrap(_try_jl_wrap)
+ChainIkSolverPos_TL::ChainIkSolverPos_TL(const Chain& chain, const JntArray& q_min, const JntArray& q_max, double eps, bool random_restart, bool try_jl_wrap):
+  chain_(chain), q_min_(q_min), q_max_(q_max), vik_solver_(chain_), fk_solver_(chain_), delta_q_(chain_.getNrOfJoints()),
+  eps_(eps), rr_(random_restart), wrap_(try_jl_wrap)
 {
 
-  assert(chain.getNrOfJoints() == _q_min.data.size());
-  assert(chain.getNrOfJoints() == _q_max.data.size());
+  assert(chain.getNrOfJoints() == q_min.data.size());
+  assert(chain.getNrOfJoints() == q_max.data.size());
 
   reset();
 
@@ -48,109 +48,109 @@ ChainIkSolverPos_TL::ChainIkSolverPos_TL(const Chain& _chain, const JntArray& _q
     std::string type = chain.segments[i].getJoint().getTypeName();
     if (type.find("Rot") != std::string::npos)
     {
-      if (_q_max(types.size()) >= std::numeric_limits<float>::max() &&
-          _q_min(types.size()) <= std::numeric_limits<float>::lowest())
-        types.push_back(KDL::BasicJointType::Continuous);
-      else types.push_back(KDL::BasicJointType::RotJoint);
+      if (q_max(types_.size()) >= std::numeric_limits<float>::max() &&
+          q_min(types_.size()) <= std::numeric_limits<float>::lowest())
+        types_.push_back(KDL::BasicJointType::Continuous);
+      else types_.push_back(KDL::BasicJointType::RotJoint);
     }
     else if (type.find("Trans") != std::string::npos)
-      types.push_back(KDL::BasicJointType::TransJoint);
+      types_.push_back(KDL::BasicJointType::TransJoint);
 
   }
 
-  assert(types.size() == _q_max.data.size());
+  assert(types_.size() == q_max.data.size());
 }
 
 
 
-int ChainIkSolverPos_TL::CartToJnt(const KDL::JntArray &q_init, const KDL::Frame &p_in, KDL::JntArray &q_out, const KDL::Twist _bounds)
+int ChainIkSolverPos_TL::CartToJnt(const KDL::JntArray& q_init, const KDL::Frame& p_in, KDL::JntArray& q_out, const double max_time, const KDL::Twist bounds)
 {
 
-  if (aborted)
+  if (aborted_)
     return -3;
 
-  auto start_time = system_clock.now();
+  auto start_time = system_clock_.now();
   q_out = q_init;
-  bounds = _bounds;
+  bounds_ = bounds;
 
 
   double time_left;
 
   do
   {
-    fksolver.JntToCart(q_out, f);
-    delta_twist = diffRelative(p_in, f);
+    fk_solver_.JntToCart(q_out, f_);
+    delta_twist_ = diffRelative(p_in, f_);
 
-    if (std::abs(delta_twist.vel.x()) <= std::abs(bounds.vel.x()))
-      delta_twist.vel.x(0);
+    if (std::abs(delta_twist_.vel.x()) <= std::abs(bounds.vel.x()))
+      delta_twist_.vel.x(0);
 
-    if (std::abs(delta_twist.vel.y()) <= std::abs(bounds.vel.y()))
-      delta_twist.vel.y(0);
+    if (std::abs(delta_twist_.vel.y()) <= std::abs(bounds.vel.y()))
+      delta_twist_.vel.y(0);
 
-    if (std::abs(delta_twist.vel.z()) <= std::abs(bounds.vel.z()))
-      delta_twist.vel.z(0);
+    if (std::abs(delta_twist_.vel.z()) <= std::abs(bounds.vel.z()))
+      delta_twist_.vel.z(0);
 
-    if (std::abs(delta_twist.rot.x()) <= std::abs(bounds.rot.x()))
-      delta_twist.rot.x(0);
+    if (std::abs(delta_twist_.rot.x()) <= std::abs(bounds.rot.x()))
+      delta_twist_.rot.x(0);
 
-    if (std::abs(delta_twist.rot.y()) <= std::abs(bounds.rot.y()))
-      delta_twist.rot.y(0);
+    if (std::abs(delta_twist_.rot.y()) <= std::abs(bounds.rot.y()))
+      delta_twist_.rot.y(0);
 
-    if (std::abs(delta_twist.rot.z()) <= std::abs(bounds.rot.z()))
-      delta_twist.rot.z(0);
+    if (std::abs(delta_twist_.rot.z()) <= std::abs(bounds.rot.z()))
+      delta_twist_.rot.z(0);
 
-    if (Equal(delta_twist, Twist::Zero(), eps))
+    if (Equal(delta_twist_, Twist::Zero(), eps_))
       return 1;
 
-    delta_twist = diff(f, p_in);
+    delta_twist_ = diff(f_, p_in);
 
-    vik_solver.CartToJnt(q_out, delta_twist, delta_q);
+    vik_solver_.CartToJnt(q_out, delta_twist_, delta_q_);
     KDL::JntArray q_curr;
 
-    Add(q_out, delta_q, q_curr);
+    Add(q_out, delta_q_, q_curr);
 
-    for (unsigned int j = 0; j < q_min.data.size(); j++)
+    for (uint j = 0; j < q_min_.data.size(); j++)
     {
-      if (types[j] == KDL::BasicJointType::Continuous)
+      if (types_[j] == KDL::BasicJointType::Continuous)
         continue;
-      if (q_curr(j) < q_min(j))
+      if (q_curr(j) < q_min_(j))
       {
-        if (!wrap || types[j] == KDL::BasicJointType::TransJoint)
+        if (!wrap_ || types_[j] == KDL::BasicJointType::TransJoint)
           // KDL's default
-          q_curr(j) = q_min(j);
+          q_curr(j) = q_min_(j);
         else
         {
           // Find actual wrapped angle between limit and joint
-          double diffangle = fmod(q_min(j) - q_curr(j), 2 * M_PI);
+          double diffangle = fmod(q_min_(j) - q_curr(j), 2 * M_PI);
           // Subtract that angle from limit and go into the range by a
           // revolution
-          double curr_angle = q_min(j) - diffangle + 2 * M_PI;
-          if (curr_angle > q_max(j))
-            q_curr(j) = q_min(j);
+          double curr_angle = q_min_(j) - diffangle + 2 * M_PI;
+          if (curr_angle > q_max_(j))
+            q_curr(j) = q_min_(j);
           else
             q_curr(j) = curr_angle;
         }
       }
     }
 
-    for (unsigned int j = 0; j < q_max.data.size(); j++)
+    for (uint j = 0; j < q_max_.data.size(); j++)
     {
-      if (types[j] == KDL::BasicJointType::Continuous)
+      if (types_[j] == KDL::BasicJointType::Continuous)
         continue;
 
-      if (q_curr(j) > q_max(j))
+      if (q_curr(j) > q_max_(j))
       {
-        if (!wrap || types[j] == KDL::BasicJointType::TransJoint)
+        if (!wrap_ || types_[j] == KDL::BasicJointType::TransJoint)
           // KDL's default
-          q_curr(j) = q_max(j);
+          q_curr(j) = q_max_(j);
         else
         {
           // Find actual wrapped angle between limit and joint
-          double diffangle = fmod(q_curr(j) - q_max(j), 2 * M_PI);
+          double diffangle = fmod(q_curr(j) - q_max_(j), 2 * M_PI);
           // Add that angle to limit and go into the range by a revolution
-          double curr_angle = q_max(j) + diffangle - 2 * M_PI;
-          if (curr_angle < q_min(j))
-            q_curr(j) = q_max(j);
+          double curr_angle = q_max_(j) + diffangle - 2 * M_PI;
+          if (curr_angle < q_min_(j))
+            q_curr(j) = q_max_(j);
           else
             q_curr(j) = curr_angle;
         }
@@ -161,13 +161,13 @@ int ChainIkSolverPos_TL::CartToJnt(const KDL::JntArray &q_init, const KDL::Frame
 
     if (q_out.data.isZero(FLT_EPSILON))
     {
-      if (rr)
+      if (rr_)
       {
-        for (unsigned int j = 0; j < q_out.data.size(); j++)
-          if (types[j] == KDL::BasicJointType::Continuous)
+        for (uint j = 0; j < q_out.data.size(); j++)
+          if (types_[j] == KDL::BasicJointType::Continuous)
             q_curr(j) = fRand(q_curr(j) - 2 * M_PI, q_curr(j) + 2 * M_PI);
           else
-            q_curr(j) = fRand(q_min(j), q_max(j));
+            q_curr(j) = fRand(q_min_(j), q_max_(j));
       }
 
       // Below would be an optimization to the normal KDL, where when it
@@ -182,18 +182,13 @@ int ChainIkSolverPos_TL::CartToJnt(const KDL::JntArray &q_init, const KDL::Frame
 
     q_out = q_curr;
 
-    auto timediff = system_clock.now() - start_time;
-    time_left = maxtime - timediff.seconds();
+    auto timediff = system_clock_.now() - start_time;
+    time_left = max_time - timediff.seconds();
   }
-  while (time_left > 0 && !aborted);
+  while (time_left > 0 && !aborted_);
 
   return -3;
 }
-
-ChainIkSolverPos_TL::~ChainIkSolverPos_TL()
-{
-}
-
 
 }
 

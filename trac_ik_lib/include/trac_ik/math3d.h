@@ -43,7 +43,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
+typedef uint uint32_t;
 
 namespace math3d
 {

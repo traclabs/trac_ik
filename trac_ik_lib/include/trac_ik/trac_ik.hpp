@@ -47,40 +47,40 @@ enum SolveType { Speed, Distance, Manip1, Manip2, Manip3 };
 class TRAC_IK
 {
 public:
-  TRAC_IK(rclcpp::Node::SharedPtr _nh, const KDL::Chain& _chain, const KDL::JntArray& _q_min, const KDL::JntArray& _q_max, double _maxtime = 0.005, double _eps = 1e-5, SolveType _type = Speed);
-  TRAC_IK(const KDL::Chain& _chain, const KDL::JntArray& _q_min, const KDL::JntArray& _q_max, double _maxtime = 0.005, double _eps = 1e-5, SolveType _type = Speed, const rclcpp::Logger& logger = rclcpp::get_logger("trac_ik.trac_ik_lib"));
+  TRAC_IK(rclcpp::Node::SharedPtr nh, const KDL::Chain& chain, const KDL::JntArray& q_min, const KDL::JntArray& q_max, double eps = 1e-5);
+  TRAC_IK(const KDL::Chain& chain, const KDL::JntArray& q_min, const KDL::JntArray& q_max, double eps = 1e-5, const rclcpp::Logger& logger = rclcpp::get_logger("trac_ik.trac_ik_lib"));
 
-  TRAC_IK(rclcpp::Node::SharedPtr _nh, const std::string& _base_link, const std::string& _tip_link, const std::string& _URDF_param = "robot_description", double _maxtime = 0.005, double _eps = 1e-5, SolveType _type = Speed);
+  TRAC_IK(rclcpp::Node::SharedPtr nh, const std::string& base_link, const std::string& tip_link, const std::string& URDF_param = "robot_description", double eps = 1e-5);
 
   ~TRAC_IK();
 
-  bool getKDLChain(KDL::Chain& chain_)
+  bool getKDLChain(KDL::Chain& chain)
   {
-    chain_ = chain;
-    return initialized;
+    chain = chain_;
+    return initialized_;
   }
 
-  bool getKDLLimits(KDL::JntArray& lb_, KDL::JntArray& ub_)
+  bool getKDLLimits(KDL::JntArray& lb, KDL::JntArray& ub)
   {
-    lb_ = lb;
-    ub_ = ub;
-    return initialized;
+    lb = lb_;
+    ub = ub_;
+    return initialized_;
   }
 
   // Requires a previous call to CartToJnt()
-  bool getSolutions(std::vector<KDL::JntArray>& solutions_)
+  bool getSolutions(std::vector<KDL::JntArray>& solutions)
   {
-    solutions_ = solutions;
-    return initialized && !solutions.empty();
+    solutions = solutions_;
+    return initialized_ && !solutions.empty();
   }
 
-  bool getSolutions(std::vector<KDL::JntArray>& solutions_, std::vector<std::pair<double, uint> >& errors_)
+  bool getSolutions(std::vector<KDL::JntArray>& solutions_, std::vector<std::pair<double, uint> >& errors)
   {
-    errors_ = errors;
+    errors = errors_;
     return getSolutions(solutions_);
   }
 
-  bool setKDLLimits(KDL::JntArray& lb_, KDL::JntArray& ub_)
+  bool setKDLLimits(KDL::JntArray& lb, KDL::JntArray& ub)
   {
     lb = lb_;
     ub = ub_;
@@ -99,50 +99,52 @@ public:
     return err;
   }
 
-  int CartToJnt(const KDL::JntArray &q_init, const KDL::Frame &p_in, KDL::JntArray &q_out, const KDL::Twist& bounds = KDL::Twist::Zero());
-
-  inline void SetSolveType(SolveType _type)
-  {
-    solvetype = _type;
-  }
+  int CartToJnt(const KDL::JntArray &q_init, const KDL::Frame &p_in, KDL::JntArray &q_out, const double max_time = 0.005, const KDL::Twist& bounds = KDL::Twist::Zero(), SolveType _type = Speed);
 
 private:
-  rclcpp::Logger logger;
-  bool initialized;
-  KDL::Chain chain;
-  KDL::JntArray lb, ub;
-  std::unique_ptr<KDL::ChainJntToJacSolver> jacsolver;
-  double eps;
-  double maxtime;
-  SolveType solvetype;
+  rclcpp::Logger logger_;
+  bool initialized_;
+  KDL::Chain chain_;
+  KDL::JntArray lb_, ub_;
+  std::unique_ptr<KDL::ChainJntToJacSolver> jac_solver_;
+  double eps_;
 
-  std::unique_ptr<NLOPT_IK::NLOPT_IK> nl_solver;
-  std::unique_ptr<KDL::ChainIkSolverPos_TL> iksolver;
+  std::unique_ptr<NLOPT_IK::NLOPT_IK> nl_solver_;
+  std::unique_ptr<KDL::ChainIkSolverPos_TL> ik_solver_;
 
-  rclcpp::Clock system_clock;
-  rclcpp::Time start_time;
+  rclcpp::Clock system_clock_;
+  rclcpp::Time start_time_;
 
   template<typename T1, typename T2>
   bool runSolver(T1& solver, T2& other_solver,
                  const KDL::JntArray &q_init,
-                 const KDL::Frame &p_in);
+                 const KDL::Frame &p_in,
+                 const SolveType &solve_type,
+                 const double max_time);
 
-  bool runKDL(const KDL::JntArray &q_init, const KDL::Frame &p_in);
-  bool runNLOPT(const KDL::JntArray &q_init, const KDL::Frame &p_in);
+  inline bool runKDL(const KDL::JntArray &q_init, const KDL::Frame &p_in, SolveType solve_type, const double max_time)
+  {
+      return runSolver(*ik_solver_.get(), *nl_solver_.get(), q_init, p_in, solve_type, max_time);
+  }
+
+  inline bool runNLOPT(const KDL::JntArray &q_init, const KDL::Frame &p_in, SolveType solve_type, const double max_time)
+  {
+      return runSolver(*nl_solver_.get(), *ik_solver_.get(), q_init, p_in, solve_type, max_time);
+  }
 
   void normalize_seed(const KDL::JntArray& seed, KDL::JntArray& solution);
   void normalize_limits(const KDL::JntArray& seed, KDL::JntArray& solution);
 
-  std::vector<KDL::BasicJointType> types;
+  std::vector<KDL::BasicJointType> types_;
 
   std::mutex mtx_;
-  std::vector<KDL::JntArray> solutions;
-  std::vector<std::pair<double, uint> >  errors;
+  std::vector<KDL::JntArray> solutions_;
+  std::vector<std::pair<double, uint> > errors_;
 
-  std::thread task1, task2;
-  KDL::Twist bounds;
+  std::thread task1_, task2_;
+  KDL::Twist bounds_;
 
-  bool unique_solution(const KDL::JntArray& sol);
+  bool unique_solution(const KDL::JntArray& sol, const double eps = 1e-4);
 
   inline static double fRand(double min, double max)
   {
@@ -162,30 +164,15 @@ private:
 
   Eigen::MatrixXd computeSingularValues(const KDL::JntArray& arr);
 
-  inline bool myEqual(const KDL::JntArray& a, const KDL::JntArray& b, const double eps=1e-4)
-  {
-    return (a.data - b.data).isZero(eps);
-  }
-
   void initialize();
 
   void resetSolvers()
   {
-    nl_solver.reset(new NLOPT_IK::NLOPT_IK(chain, lb, ub, maxtime, eps, NLOPT_IK::SumSq, logger));
-    iksolver.reset(new KDL::ChainIkSolverPos_TL(chain, lb, ub, maxtime, eps, true, true));
+    nl_solver_.reset(new NLOPT_IK::NLOPT_IK(chain_, lb_, ub_, eps_, NLOPT_IK::SumSq, logger_));
+    ik_solver_.reset(new KDL::ChainIkSolverPos_TL(chain_, lb_, ub_, eps_, true, true));
   }
 
 };
-
-inline bool TRAC_IK::runKDL(const KDL::JntArray &q_init, const KDL::Frame &p_in)
-{
-  return runSolver(*iksolver.get(), *nl_solver.get(), q_init, p_in);
-}
-
-inline bool TRAC_IK::runNLOPT(const KDL::JntArray &q_init, const KDL::Frame &p_in)
-{
-  return runSolver(*nl_solver.get(), *iksolver.get(), q_init, p_in);
-}
 
 }
 

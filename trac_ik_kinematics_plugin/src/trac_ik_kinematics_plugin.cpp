@@ -29,7 +29,11 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 ********************************************************************************/
 
 
+#if __has_include(<urdf/model.hpp>)
 #include <urdf/model.hpp>
+#else
+#include <urdf/model.h>
+#endif
 #include <tf2_kdl/tf2_kdl.hpp>
 #include <algorithm>
 #include <kdl/tree.hpp>
